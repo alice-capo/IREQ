@@ -1,0 +1,561 @@
+
+<!-- saved from url=(0053)file:///Users/alicecaporale/Downloads/IREQ23%203.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><title>IREQver4_3</title>
+    </head><body vlink="#003300" alink="#ff0000" link="#993333" bgcolor="#ffffff"><content="text charset="iso-8859-1&quot;" html;="">
+    <style type="TEXT/CSS"></style>
+    
+    <meta content="MSHTML 6.00.2600.0" name="GENERATOR">
+    
+    <script language="JavaScript" type="text/javascript">
+    <!--//  Developed by Ingvar Holmer and Hakan O. Nilsson, 1990.
+    //  Altered by Hakan O. Nilsson and Ingvar Holmer, 1992.
+    //  Javascript original by Tomas Morales & Pilar Armenderiz, 1998.
+    //  Modified content and code by Hakan O. Nilsson and Ingvar Holmer, 2000-2002.
+    
+    //calculation of IREQ by iteration
+    function calcIREQ(form) {
+        
+      var M,Ta,Tr,p,w,v,rh,Tsk,wetness,Tex,Pex,
+      Psks,fcl,W,vp,Icl,Iclr,Pa,Tcl,hc,hr,
+      Wb,Hb,HRm,HRo,age,ArAdu,IREQ,Iar,Rt,factor,Balance,R,C,Hres,
+      E,S,DLE,IclCorr,slask,worktype,calculation,
+      message,IREQneutral,IREQminimal,DLEneutral,DLEminimal = 1;
+      W = eval(form.W.value);
+      Ta = eval(form.Ta.value); 
+      Tr = eval(form.Tr.value);
+      w = eval(form.w.value);
+      p = eval(form.p.value);
+      v = eval(form.v.value);
+      rh = eval(form.rh.value);
+      Icl = eval(form.Icl.value); 
+      Wb = eval(form.Wb.value);
+      Hb = eval(form.Hb.value);
+      HRm = eval(form.HRm.value); 
+      HRo = eval(form.HRo.value);
+      age = eval(form.age.value); 
+
+
+
+      // dichiarazione var Icl e impostazione per form "tendina"
+        var iclSelect = document.getElementById("iclSelect");
+        var Icl = iclSelect.value;
+
+      
+      //calcola Adu
+      var Adu= 0.007184*Math.pow(Wb,0.425)*Math.pow((Hb*100),0.725);
+
+      //calcola Mo
+      var Mo; 
+      if (form.gender.value=='male'){
+        Mo= 60*Adu;
+      } else if (form.gender.value=='female'){
+        Mo= 55*Adu;
+      }
+
+      //calcola HRmax
+      var HRmax= 208-0.7*age;
+      
+      //calcola Wbl
+      var Wbl;
+      if (form.gender.value=='male'){
+        Wbl= (1.08-(Wb/(80*Math.pow(Hb,2))))*Wb;
+      } else if (form.gender.value=='female'){
+        Wbl= (0.86-(Wb/(107.5*Math.pow(Hb,2))))*Wb;
+      }
+
+      //calcola MWC
+      var MWC;
+      if (form.gender.value=='male'){
+        MWC= (19.45-0.133*age)*Wbl;
+      } else if (form.gender.value=='female'){
+        MWC= (17.51-0.150*age)*Wbl;
+      }
+
+      //calcola RM
+      var RM =(HRmax-HRo)/(MWC-Mo);
+      //calcola M
+      var M = Mo + (HRm-HRo)/RM;
+      document.getElementById("MOoutput").innerHTML = `<b>M: ${Math.round((M)*10)/10} W, is the metabolic rate value calculated by the analysis method.`;
+    
+        //limiti per M e Ta
+    form.message.value="CALCULATION IN PROGRESS!";
+          if (M<=58) {
+            M=58; 
+          }
+          if (M>=400) {
+            M=400; 
+          }
+          if (Ta>=10) {
+            Ta=10; form.Ta.value=Ta;
+          }
+       
+      //calcola walking speed
+      if (w<=0.0052*(M-58)) {
+            w=0.0052*(M-58); form.w.value=Math.round(w*10)/10; 
+          }  
+          if (w>=1.2) {
+            w=1.2; form.w.value=1.2;
+          }
+
+      if (v<=0.4) {
+        v=0.4; form.v.value=v; 
+      }
+      if (v>=18) {
+        v=18;form.v.value=v;
+      }
+      
+      Icl=Icl*0.155; //conversione di Icl
+      Iar=0.092*Math.exp(-0.15*v-0.22*w)-0.0045;
+      
+      calculation=0; 
+      do {
+        calculation=calculation+1;
+
+        // Calculation of Tsk (C) and wetness (%) 
+        if (calculation==1) {
+
+        // For IREQminimal, DLEminimal ! 
+          Tsk=33.34-0.0354*M                  
+          wetness=0.06;
+        }
+               else  {
+          // For IREQneutral, DLEneutral ! 
+          Tsk=35.7-0.0285*M;
+          wetness=0.001*M;
+         }
+
+        // Calculation of Tex (C) and Pex,Psks,Pa (Pa) 
+        Tex=29+0.2*Ta;                     
+        Pex=0.1333*Math.exp(18.6686-4030.183/(Tex+235));
+        Psks=0.1333*Math.exp(18.6686-4030.183/(Tsk+235)); 
+        Pa=(rh/100)*0.1333*Math.exp(18.6686-4030.183/(Ta+235));
+        
+        // Calculation of IREQ (m2C/W),Rt (m2kPa/W),fcl (n.d.), hr W/m2C with stepwise iteration 
+        IREQ=0.5; hr=3; ArAdu=0.77; factor=0.5; // Initial values ! 
+        do {
+          fcl=1+1.97*IREQ;        //there was a wrong formula before. (1+1.197*IREQ)
+          Rt=(0.06/0.38)*(Iar+IREQ);
+          E=wetness*(Psks-Pa)/Rt;
+          Hres=1.73E-2*M*(Pex-Pa)+1.4E-3*M*(Tex-Ta);      
+          Tcl=Tsk-IREQ*(M-W-E-Hres);
+          hr=5.67E-8*0.97*ArAdu*(Math.exp(4*Math.log(273+Tcl))-
+           Math.exp(4*Math.log(273+Tr)))/(Tcl-Tr);
+          hc=1/Iar-hr;
+          R=fcl*hr*(Tcl-Tr);
+          C=fcl*hc*(Tcl-Ta);
+          Balance=M-W-E-Hres-R-C;
+          if (Balance>0)  {
+            IREQ=IREQ-factor;
+            factor=factor/2;
+          }
+          else {
+            IREQ=IREQ+factor;         
+          }
+    
+        } while (Math.abs(Balance) > 0.01); 
+        IREQ=(Tsk-Tcl)/(R+C);
+
+     Iclr=((Icl+0.085/(1+1.97*Icl))*(0.54*Math.exp(-0.15*v-0.22*w)*Math.pow(p,0.075)-0.06*Math.log(p)+0.5)-(0.092*Math.exp(-0.15*v-0.22*w)-0.0045)/(1+1.97*Icl));
+     document.getElementById("IclrOutput").innerHTML = `<b>Iclr: ${Math.round((Iclr)/0.155*10)/10} Iclr is the corrected Icl value for the effects of wind penetration and activity, taking into account the air permeability of the outer garment layer.`;
+     
+
+          // *** Calculation of Dlimneutral and Dlimminimal *** 
+        // Calculation of S (W/m2), Rt (m2kPa/W), fcl (n.d.), hr W/m2C with stepwise iteration 
+        Tcl=Ta; hr=3; S=-40; ArAdu=0.77; factor=500; Iclr=Icl; // Initial values !
+        do {
+          fcl=1+1.97*Iclr; //there was a wrong formula before
+          Iclr=((Icl+0.085/fcl)*(0.54*Math.exp(-0.15*v-0.22*w)*Math.pow(p,0.075)-0.06*Math.log(p)+0.5)-(0.092*Math.exp(-0.15*v-0.22*w)-0.0045)/fcl);
+          Rt=(0.06/0.38)*(Iar+Iclr); //controlla im
+          E=wetness*(Psks-Pa)/Rt;
+          Hres=1.73E-2*M*(Pex-Pa)+1.4E-3*M*(Tex-Ta);
+          Tcl=Tsk-Iclr*(M-W-E-Hres-S);
+          hr=5.67E-8*0.97*ArAdu*(Math.exp(4*Math.log(273+Tcl))-
+          Math.exp(4*Math.log(273+Tr)))/(Tcl-Tr);
+          hc=1/Iar-hr;
+          R=fcl*hr*(Tcl-Tr);
+          C=fcl*hc*(Tcl-Ta);
+          Balance=M-W-E-Hres-R-C-S;  
+          if (Balance>0)  {
+            S=S+factor;
+            factor=factor/2;
+          }
+          else {
+            S=S-factor;
+          }     
+        } while (Math.abs(Balance) > 0.01);
+        DLE=-40/S;
+
+        
+        form.message.value="CALCULATION READY!";
+        
+
+        if (calculation==1) {
+          IREQminimal=Math.max(0, Math.round((IREQ/0.155)*10)/10);
+          form.IREQminimal.value = IREQminimal === 0 ? 'No Insulation' : IREQminimal;
+
+          ICLminimal=Math.max(0,Math.round((((IREQ+Iar/fcl)/(0.54*Math.exp(-0.15*v-0.22*w)*
+          Math.pow(p,0.075)-0.06*Math.log(p)+0.5))-0.085/fcl)/0.155*10)/10);
+          form.ICLminimal.value = ICLminimal === 0 ? 'No Insulation' : ICLminimal;
+          
+          
+        } else  {
+          IREQneutral=Math.max(0,Math.round((IREQ/0.155)*10)/10);
+          form.IREQneutral.value = IREQneutral === 0 ? 'No Insulation' : IREQneutral;
+
+          ICLneutral=Math.max(0,Math.round((((IREQ+Iar/fcl)/(0.54*Math.exp(-0.15*v-0.22*w)*
+          Math.pow(p,0.075)-0.06*Math.log(p)+0.5))-0.085/fcl)/0.155*10)/10);
+          form.ICLneutral.value = ICLneutral === 0 ? 'No Insulation' : ICLneutral;
+         
+          if (S>-8)
+            form.DLEneutral.value="more than 8"
+          else
+            form.DLEneutral.value=Math.round(DLE*10)/10
+          
+          // confronto REQUIRED Icl con Icl AVAILABLE
+          if (Icl/0.155>form.ICLneutral.value){
+            form.message.value="AVAILABLE > REQUIRED MINIMAL & NEUTRAL basic clothing insulation"; 
+          }else if (Icl/0.155<form.ICLminimal.value){
+            form.message.value="AVAILABLE < REQUIRED MINIMAL & NEUTRAL basic clothing insulation";
+          }else{
+            form.message.value="AVAILABLE is in the range of the REQUIRED MINIMUM AND NEUTRAL basic clothing insulation";
+          }
+          // confronto IREQ Iclr secondo la norma 11079
+          if(Iclr/0.155>form.IREQneutral.value) {
+            form.comparisonIREQ.value= "Warm, overheating zone, clothing insulation shall be reduced.";
+          }else if(Iclr/0.155<form.IREQminimal.value){ 
+            form.comparisonIREQ.value= "Cold, cooling zone, clothing insulation shall be increased or Dlim calculated.";
+          }else {
+            form.comparisonIREQ.value= "Neutral, regulatory zone, no action required.";
+          }
+        }
+          
+            
+      } while (calculation < 2);
+
+    }
+    
+
+    function calcRT(form) {
+      var M,Ta,Tr,p,w,v,rh,Tsk,wetness,Tex,Pex,
+      Psks,fcl,W,vp,Icl,Iclr,Pa,Tcl,hc,hr,Wb,Hb,HRm,HRo,age,
+      IREQ,Ia,Rt,factor,Balance,R,C,Hres,
+      E,S,DLE,ArAdu,IclCorr,slask,worktype,calculation,
+      message,IREQneutral,IREQminimal,DLEneutral,DLEminimal = 1;
+      
+      W = eval(form.W.value);
+      Ta = eval(form.Ta.value); 
+      Tr = eval(form.Tr.value);
+      p = eval(form.p.value); 
+      w = eval(form.w.value);
+      v = eval(form.v.value); 
+      rh = eval(form.rh.value);
+      Icl = eval(form.Icl.value); 
+      Wb = eval(form.Wb.value); 
+      Hb = eval(form.Hb.value); 
+      HRm = eval(form.HRm.value); 
+      HRo = eval(form.HRo.value); 
+      age = eval(form.age.value);
+    form.message.value="CALCULATION IN PROGRESS!";
+
+
+      Icl=Icl*0.155;
+      Ia=(0.092*Math.exp(-0.15*v-0.22*w)-0.0045);
+      calculation=0;
+
+        do {
+          calculation=calculation+1;
+
+          // Calculation of Tsk (C) and wetness (%) 
+          // For RTneutral! 
+          Tsk=35.7-0.0285*M;
+          wetness=0.001*M;
+
+          // Calculation of Tex (C) and Pex,Psks,Pa (Pa) 
+          Tex=29+0.2*Ta;                     
+          Pex=0.1333*Math.exp(18.6686-4030.183/(Tex+235));
+          Psks=0.1333*Math.exp(18.6686-4030.183/(Tsk+235)); 
+          Pa=(rh/100)*0.1333*Math.exp(18.6686-4030.183/(Ta+235));  
+
+  //calcola Adu
+  var Adu= 0.007184*Math.pow(Wb,0.425)*Math.pow((Hb*100),0.725);
+
+  //calcola Mo
+  var Mo; 
+  if (form.gender.value=='male'){
+    Mo= 60*Adu;
+  } else if (form.gender.value=='female'){
+    Mo= 55*Adu;
+  }
+
+  //calcola HRmax
+  var HRmax= 208-0.7*age;
+
+  //calcola Wbl
+  var Wbl;
+  if (form.gender.value=='male'){
+    Wbl= (1.08-(Wb/(80*Math.pow(Hb,2))))*Wb;
+  } else if (form.gender.value=='female'){
+    Wbl= (0.86-(Wb/(107.5*Math.pow(Hb,2))))*Wb;
+  }
+  //calcola MWC
+  var MWC;
+  if (form.gender.value=='male'){
+    MWC= (19.45-0.133*age)*Wbl;
+  } else if (form.gender.value=='female'){
+    MWC= (17.51-0.151*age)*Wbl;
+  }
+
+  //calcola RM
+  var RM =(HRmax-HRo)/(MWC-Mo);
+
+  //calcola M
+  var M = Mo+ (HRm-HRo)/RM;
+  document.getElementById("M1output").innerHTML = `<b>M: ${Math.round((M)*10)/10} W, is the metabolic rate value calculated by the analysis method.`;
+    
+    if (M<=58) {
+        M=58; 
+      }
+      if (M>=400) {
+        M=400; 
+      }
+      // Calculation of stationary w (m/s)
+      if (w<=0.0052*(M-58)) {
+        w=0.0052*(M-58);
+        form.w.value=Math.round(w*10)/10;
+      }  
+      if (w>=1.2) {
+        w=1.2; form.w.value=1.2;
+      }
+      if (v<=0.4) {
+        v=0.4; form.v.value=v;
+      }
+      if (v>=18) {
+        v=18; form.v.value=v;
+      }
+        // Calculation of S (W/m2), Rt (m2kPa/W), fcl (n.d.), hr W/m2C with stepwise iteration 
+        Tcl=Ta; hr=3; S=-40; ArAdu=0.77; factor=100; Iclr=Icl;// Initial values !          
+        do {
+          fcl=1+1.97*Iclr; // corrected
+          Iclr=((Icl+0.085/fcl)*(0.54*Math.exp(-0.15*v-0.22*w)*Math.pow(p,0.075)-0.06*Math.log(p)+0.5)-
+          (0.092*Math.exp(-0.15*v-0.22*w)-0.0045)/fcl);
+          Rt=(0.06/0.38)*(Ia+Iclr);
+          E=wetness*(Psks-Pa)/Rt;
+          Hres=1.73E-2*M*(Pex-Pa)+1.4E-3*M*(Tex-Ta);
+          Tcl=Tsk-Iclr*(M-W-E-Hres-S);      
+          hr=5.67E-8*0.97*ArAdu*(Math.exp(4*Math.log(273+Tcl))-Math.exp(4*Math.log(273+Tr)))/(Tcl-Tr);
+          hc=1/Ia-hr;
+          R=fcl*hr*(Tcl-Tr);
+          C=fcl*hc*(Tcl-Ta);
+          Balance=M-W-E-Hres-R-C-S;  
+          if (Balance>0)  {
+            S=S+factor;
+            factor=factor/2;
+          }
+          else {
+            S=S-factor;         
+          }     
+        } while (Math.abs(Balance) > 0.01);
+        DLE=-40/S;
+        form.message.value="CALCULATION READY!";
+        if (DLE>=0)
+          form.message.value="CALCULATION INVALID! (Negative body heat storage)"
+                     else
+          form.RTneutral.value=Math.round(Math.abs(DLE)*10)/10
+            } while (calculation<2)
+    }
+    
+    function calctwc(form) {
+      var v,Tawci,WCI,twc = 1;
+      v = eval(form.v.value);
+      v = v*1.0
+      Tawci = eval(form.Tawci.value);
+      twc = 13.12+0.6215*Tawci-11.37*Math.pow(v,0.16)+0.3965*Tawci*Math.pow(v,0.16);
+      form.twc.value = Math.round(twc);
+    }
+    
+    function interpret()
+    {
+    alert("IREQ is a measure of the thermal stress presented by the combined effects of internal heat production and heat exchange with the environment. The greater the cooling power of the environment, the higher the value of IREQ at any given activity level. At any given set of climatic conditions, cold stress and thereby IREQ is reduced with increasing activity due to the extra demand for dissipation of metabolic heat.");
+    }
+    --></script>
+    
+
+    <table cellspacing="0" cellpadding="0" width="600" bgcolor="#ffffff" border="0">
+      <tbody>
+      <tr>
+        <td>
+          <p align="center"><font face="Arial" color="#000000" size="3"><strong>JAVA applet for 
+          ISO 11079</strong></font></p>
+          <p align="center"><font face="Arial" color="#000000" size="4"><strong>CALCULATION 
+          OF REQUIRED CLOTHING INSULATION (IREQ),<br>DURATION LIMITED EXPOSURE 
+          (Dlim), <br>REQUIRED RECOVERY TIME (RT),<br> and Wind Chill Temperature (twc) </strong></font><font color="#4276ff"> 
+          </font></p>
+          <p align="center"><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular">IREQ 2023  <b>ver 
+          4.3 <b><br>BOOKMARK THIS PAGE in order to ALWAYS use the LATEST VERSION of the code.</b><br>Disclaimer and 
+          references at the end of the document.</b></font></p></td></tr></tbody></table>
+    <form name="IREQform" action="file:///Users/alicecaporale/Downloads/*">
+    <font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular">
+      </font><table cellspacing="1" width="600" bgcolor="#f0f8ff" border="1"><tbody>
+      <tr>
+        <td>
+          <p align="center"><font face="Arial" color="#00000" size="3"><b>CALCULATION OF 
+          REQUIRED INSULATION, IREQ AND<br>DURATION LIMITED EXPOSURE, D<b>lim</b></b> 
+          </font></p>
+          <p><font face="Arial" size="2">
+
+          <input size="5" value="0" name="W"> W (W/m2), Rate of mechanical work, (normally 0)
+          <br><input size="5" value="-20" name="Ta"> Ta (C), Ambient air temperature (&lt; +10 C)
+          <br><input size="5" value="-20" name="Tr"> Tr (C), Mean radiant temperature (often close to ambient air temperature)
+          <br><select name="p" id="pselect">
+            <option value="110"> p &gt; 100 (high permeability: the outer layer of the fabric allows air to pass easily.) </option>
+            <option value="50"> 5 &lt; p &#8804; 100  (moderate permeability)</option>
+            <option value="4"> p &#8804; 5 (low permeability: the outer layer of fabrics does not allow air to pass through, technical fabric.) </option>
+            <option value="8"> p = 8 (windproof fabrics)</option>
+            </select>
+          <br><input size="5" value="0" name="w"> w (m/s), Walking speed (normally lower)
+          <br><input size="5" value="0.4" name="v"> v (m/s), Relative air velocity (0.4 to 18 m/s) 
+          <br><input size="5" value="90" name="rh"> rh (%), Relative humidity
+          <br><select name="Icl" id="iclSelect"> 
+            <option value="0.5">0.5 (Brief, short-sleeve shirt, fitted trousers, calf lenght socks, shoes) </option> 
+            <option value="0.6">0.6 (Underpants, shirt, fitted trousers, socks, shoes) </option> 
+            <option value="0.7">0.7 (Underpants, coverall, socks, shoes) </option> 
+            <option value="0.8">0.8 (Underpants, shirt, coverall, socks, shoes) </option> 
+            <option value="0.9">0.9 (Underpants, shirt, trousers, smock, socks, shoes) </option>  
+            <option value="1.0">1.0 (Briefs, undershirt, underpants, shirt, overalls, calf length socks, shoes) </option> 
+            <option value="1.1">1.1 (Underpants, undershirt, shirt, trousers, jacket, vest, socks, shoes) </option> 
+            <option value="1.3">1.3 (Underpants, shirt, trousers, jacket, coverall, socks, shoes) </option> 
+            <option value="1.4">1.4 (Undershirt, underpants, insulated trousers, insulated jacket, socks, shoes) </option> 
+            <option value="1.5">1.5 (Briefs, Tshirt, shirt, fitted trousers, insulated coveralls, calf length socks, shoes) </option>  
+            <option value="1.6">1.6 (Underpants, undershirt, shirt, trousers, jacket, overjacket, hat, gloves, socks, shoes) </option> 
+            <option value="1.9">1.9 (Underpants, undershirt, shirt, trousers, jacket, overjacket, overtrousers, socks, shoes) </option> 
+            <option value="2.0">2.0 (Underpants, undershirt, shirt, trousers, jacket, overjacket, overtrousers, socks, shoes, hat, gloves) </option>  
+            <option value="2.2">2.2 (Undershirt, underpants, insulated trousers, insulated jacket, overtrousers, overjacket, socks, shoes) </option> 
+            <option value="2.5">2.5 (Undershirt, underpants, insulated trousers, insulated jacket, overtrousers, overjacket, socks, shoes, hat, gloves) </option> 
+            <option value="3">3( Arctic clothing systems) </option> 
+            <option value="4.2">4.2( Arctic clothing systems) </option><option> 
+            </option></select> Icl (clo), AVAILABLE basic clothing insulation (1 clo = 0.155 W/m2K)</font></p><font face="Arial" size="2">
+            <p><span id="IclrOutput"><b>Iclr: 1.9 Iclr is the corrected Icl value for the effects of wind penetration and activity, taking into account the air permeability of the outer garment layer.</b></span></p> 
+            <p><span id="MOoutput"><b>M: 157.9 W, is the metabolic rate value calculated by the analysis method.</b></span></p> 
+          <br><input type="radio" name="gender" value="male"> Uomo
+          <br><input type="radio" name="gender" value="female"> Donna
+          <br><input size="5" value="0" name="age"> age (years)
+          <br><input size="5" value="0" name="Wb"> Wb (kg), Weight 
+          <br><input size="5" value="0" name="Hb"> Hb (m), Height 
+          <br><input size="5" value="0" name="HRm"> HRm (bpm), Mean Heart rate 
+          <br><input size="5" value="0" name="HRo"> HRo (bpm), Heart rate at rest (bpm)
+            
+            </font><p></p><p align="center"><font face="Arial" size="2">
+            <input onclick="calcIREQ(this.form)" type="button" value="Calculate IREQ" name="name"> 
+            <input onclick="interpret()" type="button" value="Interpret IREQ" name="name"> 
+
+          </font></p>
+          <p><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular"><strong><i>IREQ 
+          &amp; Dlim RESULTS (minimal to neutral)</i></strong></font></p>
+          <p><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular"><i>
+          Insulation Required, IREQ 
+            <input size="15" value="IREQminimal" name="IREQminimal"> to <input size="15" value="IREQneutral" name="IREQneutral"> (clo)</i></font></p><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular">
+          <p><i>REQUIRED basic clothing insulation (ISO 9920), Icl 
+            <input size="15" value="ICLminimal" name="ICLminimal"> to <input size="15" value="ICLneutral" name="ICLneutral"> (clo)</i></p>
+          <p><i>Duration limited exposure, Dlim (calculated from IREQneutral)
+            <input size="10" value="DLEneutral" name="DLEneutral">  (hours)</i></p>
+          </font><p><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular"><input size="80" value="message" name="message"></font> 
+          </p><p><input size="80" value="comparisonIREQ" name="comparisonIREQ">
+    </p></td></tr></tbody></table></form>
+    <form name="rtform" action="file:///Users/alicecaporale/Downloads/*">
+    <table cellspacing="1" width="600" bgcolor="#f0f8ff" border="1">
+      <tbody>
+      <tr>
+        <td>
+          <p align="center"><font face="Arial" color="#000000" size="3"><b>CALCULATION OF 
+          REQUIRED RECOVERY TIME, RT</b> </font></p>
+          <p><font face="Arial" size="2">
+          <input size="5" value="0" name="W"> W (W/m2), Rate of mechanical work, (normally 0)
+          <br><input size="5" value="25" name="Ta"> Ta (C), Ambient air temperature, (normally warmer!)
+          <br><input size="5" value="25" name="Tr"> Tr (C), Mean radiant temperature, (normally warmer!)
+          <br><select name="p" id="pselect">
+            <option value="110"> p &gt; 100 (high permeability: the outer layer of the fabric allows air to pass easily.) </option>
+            <option value="50"> 5 &lt; p &#8804; 100  (moderate permeability)</option>
+            <option value="4"> p &#8804; 5 (low permeability: the outer layer of fabrics does not allow air to pass through, technical fabric.) </option>
+            <option value="8"> p = 8 (windproof fabrics)</option>
+          </select>
+          <br><input size="5" value="0" name="w"> w (m/s), Walking speed (normally lower)
+          <br><input size="5" value="0.4" name="v"> v (m/s), Relative air velocity (normally lower!)
+          <br><input size="5" value="50" name="rh"> rh (%), Relative humidity
+          <br><select name="Icl" id="iclSelect"> 
+            <option value="0.5">0.5 (Brief, short-sleeve shirt, fitted trousers, calf lenght socks, shoes) </option> 
+            <option value="0.6">0.6 (Underpants, shirt, fitted trousers, socks, shoes) </option> 
+            <option value="0.7">0.7 (Underpants, coverall, socks, shoes) </option> 
+            <option value="0.8">0.8 (Underpants, shirt, coverall, socks, shoes) </option> 
+            <option value="0.9">0.9 (Underpants, shirt, trousers, smock, socks, shoes) </option>  
+            <option value="1.0">1.0 (Briefs, undershirt, underpants, shirt, overalls, calf length socks, shoes) </option> 
+            <option value="1.1">1.1 (Underpants, undershirt, shirt, trousers, jacket, vest, socks, shoes) </option> 
+            <option value="1.3">1.3 (Underpants, shirt, trousers, jacket, coverall, socks, shoes) </option> 
+            <option value="1.4">1.4 (Undershirt, underpants, insulated trousers, insulated jacket, socks, shoes) </option> 
+            <option value="1.5">1.5 (Briefs, Tshirt, shirt, fitted trousers, insulated coveralls, calf length socks, shoes) </option>  
+            <option value="1.6">1.6 (Underpants, undershirt, shirt, trousers, jacket, overjacket, hat, gloves, socks, shoes) </option> 
+            <option value="1.9">1.9 (Underpants, undershirt, shirt, trousers, jacket, overjacket, overtrousers, socks, shoes) </option> 
+            <option value="2.0">2.0 (Underpants, undershirt, shirt, trousers, jacket, overjacket, overtrousers, socks, shoes, hat, gloves) </option>  
+            <option value="2.2">2.2 (Undershirt, underpants, insulated trousers, insulated jacket, overtrousers, overjacket, socks, shoes) </option> 
+            <option value="2.6">2.6 (Undershirt, underpants, insulated trousers, insulated jacket, overtrousers, overjacket, socks, shoes, hat, gloves) </option> 
+            <option value="3">3( Arctic clothing systems) </option> 
+            <option value="4,5">4,5( Arctic clothing systems) </option><option> 
+            </option></select> Icl (clo), AVAILABLE basic clothing insulation (normally lower!)</font></p><font face="Arial" size="2">
+            <p><span id="M1output"></span></p>   
+          <br><input type="radio" name="gender" value="male"> Uomo
+          <br><input type="radio" name="gender" value="female"> Donna
+          <br><input size="5" value="0" name="age"> age (years)
+          <br><input size="5" value="0" name="Wb"> Wb (kg), Weight 
+          <br><input size="5" value="0" name="Hb"> Hb (m), Height 
+          <br><input size="5" value="0" name="HRm"> HRm (bpm), Mean Heart rate 
+          <br><input size="5" value="0" name="HRo"> HRo (bpm), Heart rate at rest (bpm)
+    
+        </font><p></p>
+
+
+          <p align="center"><font face="Arial" size="2"><input onclick="calcRT(this.form)" type="button" value="Calculate RT" name="name"> 
+    <input onclick="interpret()" type="button" value="Interpret RT" name="name"> 
+          </font></p>
+          <p><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular"><strong><i>RT 
+          RESULTS (neutral)</i></strong></font></p><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular">
+          <p><i>Required recovery time <input size="10" value="RTneutral" name="RTneutral"> (hours)</i></p><i>
+          </i><p><i></i><input size="80" value="message" name="message"> 
+    </p></font></td></tr></tbody></table></form>
+    <form name="twcform" action="file:///Users/alicecaporale/Downloads/*">
+    <table cellspacing="1" width="600" bgcolor="#f0f8ff" border="1" colour="#0000FF">
+      <tbody>
+      <tr>
+        <td>
+          <p align="center"><font face="Arial" color="#000000" size="3"><b>CALCULATION OF 
+          WINDCHILL TEMPERATURE, twc</b> </font></p>
+          <p><font face="Arial" size="2">
+        <input size="5" value="6.8" name="v"> v (km/h), Meteorological wind speed (at 10 m)
+        <br><input size="5" value="-25" name="Tawci"> Ta (C), Ambient air temperature </font></p>
+          <p align="center"><font face="Arial" size="2"><input onclick="calctwc(this.form)" type="button" value="Calculate twc" name="name"> 
+    <input onclick="interpret()" type="button" value="Interpret twc" name="name"> 
+          </font></p>
+       
+          <p>Wind chill temperature, twc <input size="10" value="twc" name="twc"> 
+          (C) </p></td></tr></tbody></table></form>
+    <table cellspacing="0" width="600" border="0">
+      <tbody>
+      <tr>
+        <td>
+          <hr size="1">
+        </td>
+        <td valign="bottom" width="100%">
+          <p align="left"><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular"><b>Disclaimer</b><br>The 
+          authors disclaim all obligations and liabilities for damages arising from 
+          the use or attempted use of the information, including, but not limited 
+          to, direct, indirect, special and consequential damages, and attorneys' 
+          and experts' fees and court costs.<b><br>Any use of the information will 
+          be at the risk of the user.</b></font></p>
+          <p><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular"><b>References</b><br>ISO 
+          11079, 2007-12-15,  ERGONOMICS OF THE THERMAL 
+          ENVIRONMENT - DETERMINATION AND INTERPRETATION OF COLD STRESS WHEN USING 
+          REQUIRED CLOTHING INSULATION (IREQ) AND LOCAL COOLING EFFECTS</font></p><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular">
+         
+          Web-contact: <b>Francesca Anna Rita Inglese <p></p>
+      </b>
+      Email:  francesca.inglese6@studio.unibo.it
+      </font><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular">&nbsp; </font><p></p></td>
+        <td valign="bottom" width="30%"><a href="http://www.niwl.se/default_en.htm"><font face="Arial,Helvetica,Geneva,Swiss,SunSans-Regular"><img height="35" src="file:///Users/alicecaporale/Downloads/IREQ23%203.html" width="96" border="0" valign="bottom"></font></a></td></tr></tbody></table></content="text></body></html>
